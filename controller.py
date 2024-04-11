@@ -37,7 +37,7 @@ from menus import mainmenu
 # Exceptions
 from tmgui.shared_exceptions import audio_exceptions
 # Models
-from tmgui.shared_models import versionmodel
+from tmgui.shared_models import versionchecker
 from tmgui.shared_models import audiomodel
 from tmgui.shared_models import filehandler as fh
 from tmgui.shared_models import calmodel
@@ -167,10 +167,8 @@ class Application(tk.Tk):
 
         # Check for updates
         if self.settings['check_for_updates'].get() == 'yes':
-        # if (self.settings['check_for_updates'].get() == 'yes') and\
-        # (self.settings['config_file_status'].get() == 1):
             _filepath = self.settings['version_lib_path'].get()
-            u = versionmodel.VersionChecker(_filepath, self.NAME, self.VERSION)
+            u = versionchecker.VersionChecker(_filepath, self.NAME, self.VERSION)
             if u.status == 'mandatory':
                 messagebox.showerror(
                     title="New Version Available",
@@ -331,14 +329,12 @@ class Application(tk.Tk):
   
         # Create offsets dictionary
         offset_dict = self.speakers.get_data()
-        print(offset_dict)
 
         # Create file name
         self._create_filename()
 
         # Call filehandler save function
         try:
-            #_filepath = os.path.join("Data", self.filename)
             self.mycsv = fh.CSVFile(
                 filepath=self.filename, 
                 data=offset_dict, 
@@ -385,8 +381,7 @@ class Application(tk.Tk):
 
 
     def _save_sessionpars(self, *_):
-        """ Save current runtime parameters to file 
-        """
+        """ Save current runtime parameters to file. """
         print("\ncontroller: Calling sessionpars model set and save funcs")
         for key, variable in self.settings.items():
             self.settings_model.set(key, variable.get())
@@ -462,8 +457,7 @@ class Application(tk.Tk):
     # Calibration Dialog Functions #
     ################################
     def play_calibration_file(self):
-        """ Load calibration file and present
-        """
+        """ Load calibration file and present. """
         # Get calibration file
         try:
             self.calmodel.get_cal_file()
@@ -481,8 +475,7 @@ class Application(tk.Tk):
 
 
     def _calc_offset(self):
-        """ Calculate offset based on SLM reading.
-        """
+        """ Calculate offset based on SLM reading. """
         # Calculate new presentation level
         self.calmodel.calc_offset()
         # Save level - this must be called here!
@@ -490,8 +483,7 @@ class Application(tk.Tk):
 
 
     def _calc_level(self, desired_spl):
-        """ Calculate new dB FS level using slm_offset.
-        """
+        """ Calculate new dB FS level using slm_offset. """
         # Calculate new presentation level
         self.calmodel.calc_level(desired_spl)
         # Save level - this must be called here!
@@ -502,8 +494,7 @@ class Application(tk.Tk):
     # Help Menu Functions #
     #######################
     def _show_help(self):
-        """ Create html help file and display in default browser
-        """
+        """ Create html help file and display in default browser. """
         print(f"\ncontroller: Calling README file (will open in browser)")
         # Read markdown file and convert to html
         with open(README.README_MD, 'r') as f:
@@ -519,8 +510,7 @@ class Application(tk.Tk):
 
 
     def _show_changelog(self):
-        """ Create html CHANGELOG file and display in default browser
-        """
+        """ Create html CHANGELOG file and display in default browser. """
         print(f"\ncontroller: Calling CHANGELOG file (will open in browser)")
         # Read markdown file and convert to html
         with open(CHANGELOG.CHANGELOG_MD, 'r') as f:
