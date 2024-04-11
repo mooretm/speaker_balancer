@@ -108,7 +108,7 @@ The Calibration window provides a simple way to calibrate your stimuli using a s
 
 # Compiling from Source
 ```
-pyinstaller --noconfirm --onefile --windowed --icon "C:/Users/MooTra/Code/Python/tmpy/tmgui/shared_assets/images/logo_icons/logo_full.ico" --add-data "C:/Users/MooTra/Code/Python/tmpy/tmgui;tmgui/" --add-data "C:/Users/MooTra/Code/Python/tmpy/tmdsp;tmdsp/" --paths "C:/Users/MooTra/Code/Python/tmpy/tmdsp" --paths "C:/Users/MooTra/Code/Python/tmpy/tmgui" --hidden-import "pandas" --hidden-import "sounddevice" --hidden-import "soundfile" --add-data "C:/Users/MooTra/Code/Python/balance_speakers2/app_assets;app_assets/"  "C:/Users/MooTra/Code/Python/balance_speakers2/controller.py"
+pyinstaller --noconfirm --onefile --windowed --icon "C:/Users/MooTra/Code/Python/tmpy/tmgui/shared_assets/images/logo_icons/logo_full.ico" --add-data "C:/Users/MooTra/Code/Python/tmpy/tmgui;tmgui/" --add-data "C:/Users/MooTra/Code/Python/tmpy/tmdsp;tmdsp/" --paths "C:/Users/MooTra/Code/Python/tmpy/tmdsp" --paths "C:/Users/MooTra/Code/Python/tmpy/tmgui" --hidden-import "pandas" --add-data "C:/Users/MooTra/Code/Python/speaker_balancer/app_assets;app_assets/" --hidden-import "sounddevice" --hidden-import "soundfile" --hidden-import "msoffcrypto"  "C:/Users/MooTra/Code/Python/speaker_balancer/controller.py"
 ```
 <br>
 <br>
