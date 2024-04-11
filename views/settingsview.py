@@ -1,4 +1,4 @@
-""" Settings dialog. """
+""" Settings view. """
 
 ###########
 # Imports #
@@ -11,7 +11,7 @@ from tkinter import ttk
 #########
 # BEGIN #
 #########
-class SessionDialog(tk.Toplevel):
+class SettingsView(tk.Toplevel):
     """ Dialog for setting session parameters. """
     def __init__(self, parent, settings, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
@@ -116,6 +116,7 @@ class SessionDialog(tk.Toplevel):
         print("\nsettingsview: Sending save event...")
         self.parent.event_generate('<<SessionSubmit>>')
         self.destroy()
+
 
 if __name__ == "__main__":
     pass
