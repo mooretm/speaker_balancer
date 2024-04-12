@@ -1,9 +1,20 @@
 <h1 style="text-align: center;">Change Log: Speaker Balancer</h1>
 ---
 
+## Version 3.0.1
+
+Date: April 12, 2024
+
+### Patches
+1. Refactored to incorporate changes made to central library.
+<br>
+<br>
+
+---
+
 ## Version 3.0.0
 
-Date March 25, 2024
+Date: March 25, 2024
 
 ### Major Features
 1. Refactored project to use shared common resources (tmpy). Local references to common modules have been removed.

@@ -7,9 +7,9 @@
 
     Written by: <b>Travis M. Moore</b>
     <br>
-    Latest version: <b>Version 3.0.0</b><br>
-    Originally created: <b>June 20, 2022</b><br>
-    Last edited: <b>March 25, 2024</b><br><br>
+    Latest version: <b>Version 3.0.1</b><br>
+    Originally created: <b>June 09, 2022</b><br>
+    Last edited: <b>April 12, 2024</b><br><br>
 </div>
 
 ---
@@ -108,7 +108,7 @@ The Calibration window provides a simple way to calibrate your stimuli using a s
 
 # Compiling from Source
 ```
-pyinstaller --noconfirm --onefile --windowed --icon "C:/Users/MooTra/Code/Python/tmpy/tmgui/shared_assets/images/logo_icons/logo_full.ico" --add-data "C:/Users/MooTra/Code/Python/tmpy/tmgui;tmgui/" --add-data "C:/Users/MooTra/Code/Python/tmpy/tmdsp;tmdsp/" --paths "C:/Users/MooTra/Code/Python/tmpy/tmdsp" --paths "C:/Users/MooTra/Code/Python/tmpy/tmgui" --hidden-import "pandas" --add-data "C:/Users/MooTra/Code/Python/speaker_balancer/app_assets;app_assets/" --hidden-import "sounddevice" --hidden-import "soundfile" --hidden-import "msoffcrypto"  "C:/Users/MooTra/Code/Python/speaker_balancer/controller.py"
+pyinstaller --noconfirm --onefile --windowed --icon "C:/Users/MooTra/Code/Python/tmpy/tmgui/shared_assets/images/logo_icons/logo_full.ico" --add-data "C:/Users/MooTra/Code/Python/tmpy/tmgui;tmgui/" --add-data "C:/Users/MooTra/Code/Python/tmpy/tmdsp;tmdsp/" --add-data "C:/Users/MooTra/Code/Python/speaker_balancer/app_assets;app_assets/" --paths "C:/Users/MooTra/Code/Python/tmpy/tmdsp" --paths "C:/Users/MooTra/Code/Python/tmpy/tmgui" --hidden-import "numpy" --hidden-import "pandas" --hidden-import "sounddevice" --hidden-import "soundfile" --hidden-import "msoffcrypto"  "C:/Users/MooTra/Code/Python/speaker_balancer/controller.py"
 ```
 <br>
 <br>

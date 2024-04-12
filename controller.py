@@ -1,6 +1,7 @@
 """ Speaker Balancer. 
 
     App to balance lab speakers using a sound level meter.
+    Also useful for troubleshooting speakers. 
 
     Written by: Travis M. Moore
     Created: June 09, 2022
@@ -12,10 +13,6 @@
 # GUI
 import tkinter as tk
 from tkinter import messagebox
-
-# Data
-import numpy as np
-import random
 
 # System
 import datetime
@@ -39,10 +36,9 @@ from tmgui.shared_exceptions import audio_exceptions
 # Models
 from tmgui.shared_models import versionchecker
 from tmgui.shared_models import audiomodel
-from tmgui.shared_models import filehandler as fh
+from tmgui.shared_models import filehandler
 from tmgui.shared_models import calmodel
 from tmgui.shared_models import settingsmodel
-#from models import settingsmodel
 from models import speakermodel
 # Views
 from views import mainview
@@ -54,6 +50,8 @@ from tmgui.shared_assets import images
 # Help
 from app_assets import README
 from app_assets import CHANGELOG
+# Functions
+from tmdsp import tmsignals
 
 
 #########
@@ -68,8 +66,8 @@ class Application(tk.Tk):
         # Constants #
         #############
         self.NAME = 'Speaker Balancer'
-        self.VERSION = '3.0.0'
-        self.EDITED = 'March 25, 2024'
+        self.VERSION = '3.0.1'
+        self.EDITED = 'April 12, 2024'
 
         # Create menu settings dictionary
         self._app_info = {
@@ -91,8 +89,6 @@ class Application(tk.Tk):
         self.iconphoto(True, self.taskbar_icon)
 
         # Assign special quit function on window close
-        # Used to close Vulcan session cleanly even if 
-        # user closes window via "X"
         self.protocol('WM_DELETE_WINDOW', self._quit)
 
         # Create variable dictionary
@@ -101,7 +97,7 @@ class Application(tk.Tk):
             'slm_reading': tk.DoubleVar(value=None),
         }
 
-        # Load current session parameters from file
+        # Load current settings from file
         # or load defaults if file does not exist yet
         # Check for version updates and destroy if mandatory
         self.settings_model = settingsmodel.SettingsModel(
@@ -128,7 +124,7 @@ class Application(tk.Tk):
         # Create callback dictionary
         event_callbacks = {
             # File menu
-            '<<FileSession>>': lambda _: self._show_settings_dialog(),
+            '<<FileSettings>>': lambda _: self._show_settings_view(),
             '<<FileQuit>>': lambda _: self._quit(),
 
             # Tools menu
@@ -141,7 +137,7 @@ class Application(tk.Tk):
             '<<HelpChangelog>>': lambda _: self._show_changelog(),
 
             # Settings window
-            '<<SessionSubmit>>': lambda _: self._save_sessionpars(),
+            '<<SettingsSubmit>>': lambda _: self._save_settings(),
 
             # Calibration window
             '<<CalPlay>>': lambda _: self.play_calibration_file(),
@@ -149,7 +145,7 @@ class Application(tk.Tk):
             '<<CalibrationSubmit>>': lambda _: self._calc_offset(),
 
             # Audio settings window
-            '<<AudioDialogSubmit>>': lambda _: self._save_sessionpars(),
+            '<<AudioViewSubmit>>': lambda _: self._save_settings(),
 
             # Main View
             '<<MainPlay>>': lambda _: self._on_play(),
@@ -236,16 +232,6 @@ class Application(tk.Tk):
         return sw
 
 
-    def wgn(self, dur, fs):
-        """ Function to generate white Gaussian noise. """
-        r = int(dur * fs)
-        random.seed(4)
-        wgn = [random.gauss(0.0, 1.0) for i in range(r)]
-        wgn -= np.mean(wgn) # Remove DC offset
-        wgn = wgn / np.max(abs(wgn)) # Normalize
-        return wgn
-
-
     def _quit(self):
         """ Exit the application. """
         self.destroy()
@@ -254,10 +240,10 @@ class Application(tk.Tk):
     ###################
     # File Menu Funcs #
     ###################
-    def _show_settings_dialog(self):
+    def _show_settings_view(self):
         """ Show session parameter dialog. """
         print("\ncontroller: Calling session dialog...")
-        settingsview.SessionDialog(self, self.settings)
+        settingsview.SettingsView(self, self.settings)
 
 
     ########################
@@ -266,11 +252,11 @@ class Application(tk.Tk):
     def _on_play(self):
         """ Generate and present WGN. """
         # Save latest duration and level values
-        self._save_sessionpars()
+        self._save_settings()
 
         # Generate WGN
         FS = 48000
-        _wgn = self.wgn(dur=self.settings['duration'].get(), fs=FS)
+        _wgn = tmsignals.wgn(dur=self.settings['duration'].get(), fs=FS)
 
         # Present WGN
         self.present_audio(
@@ -335,7 +321,7 @@ class Application(tk.Tk):
 
         # Call filehandler save function
         try:
-            self.mycsv = fh.CSVFile(
+            self.mycsv = filehandler.CSVFile(
                 filepath=self.filename, 
                 data=offset_dict, 
                 file_browser=True
@@ -380,7 +366,7 @@ class Application(tk.Tk):
             "running sessionpars dict")
 
 
-    def _save_sessionpars(self, *_):
+    def _save_settings(self, *_):
         """ Save current runtime parameters to file. """
         print("\ncontroller: Calling sessionpars model set and save funcs")
         for key, variable in self.settings.items():
@@ -444,13 +430,13 @@ class Application(tk.Tk):
     def _show_audio_dialog(self):
         """ Show audio settings dialog. """
         print("\ncontroller: Calling audio dialog...")
-        audioview.AudioDialog(self, self.settings)
+        audioview.AudioView(self, self.settings)
 
 
     def _show_calibration_dialog(self):
         """ Display the calibration dialog window. """
         print("\ncontroller: Calling calibration dialog...")
-        calibrationview.CalibrationDialog(self, self.settings)
+        calibrationview.CalibrationView(self, self.settings)
 
 
     ################################
@@ -479,7 +465,7 @@ class Application(tk.Tk):
         # Calculate new presentation level
         self.calmodel.calc_offset()
         # Save level - this must be called here!
-        self._save_sessionpars()
+        self._save_settings()
 
 
     def _calc_level(self, desired_spl):
@@ -487,7 +473,7 @@ class Application(tk.Tk):
         # Calculate new presentation level
         self.calmodel.calc_level(desired_spl)
         # Save level - this must be called here!
-        self._save_sessionpars()
+        self._save_settings()
 
 
     #######################
@@ -541,7 +527,7 @@ class Application(tk.Tk):
                 message="Cannot find the audio file!",
                 detail="Go to File>Session to specify a valid audio path."
             )
-            self._show_settings_dialog()
+            self._show_settings_view()
             return
         except audio_exceptions.InvalidAudioType:
             raise

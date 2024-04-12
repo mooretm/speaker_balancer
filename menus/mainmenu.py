@@ -3,11 +3,11 @@
 ###########
 # Imports #
 ###########
-# Import GUI packages
+# GUI
 import tkinter as tk
 from tkinter import messagebox
 
-# Import custom modules
+# Custom
 from tmgui.shared_assets import images
 
 
@@ -15,8 +15,7 @@ from tmgui.shared_assets import images
 # Begin #
 #########
 class MainMenu(tk.Menu):
-    """ Main Menu
-    """
+    """ Main Menu. """
     # Find parent window and tell it to 
     # generate a callback sequence
     def _event(self, sequence):
@@ -67,7 +66,7 @@ class MainMenu(tk.Menu):
         self.file_menu = tk.Menu(self, tearoff=False)
         self.file_menu.add_command(
             label="Settings...",
-            command=self._event('<<FileSession>>'),
+            command=self._event('<<FileSettings>>'),
             image=self.icons['file_settings'],
             compound=tk.LEFT
         )
@@ -145,7 +144,7 @@ class MainMenu(tk.Menu):
     ##################
     # HELP menu
     def show_about(self):
-        """ Show the about dialog """
+        """ Show the about dialog. """
         about_message = self._app_info['name']
         about_detail = (
             'Written by: Travis M. Moore\n' +
