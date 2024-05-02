@@ -344,9 +344,9 @@ class Application(tk.Tk):
             return
 
 
-    #############################
-    # Settings Dialog Functions #
-    #############################
+    ###########################
+    # Settings View Functions #
+    ###########################
     def _load_settings(self):
         """ Load parameters into self.settings dict. """
         # Variable types
