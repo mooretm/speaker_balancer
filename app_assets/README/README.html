@@ -7,9 +7,9 @@
 
     Written by: <b>Travis M. Moore</b>
     <br>
-    Latest version: <b>Version 3.0.1</b><br>
+    Latest version: <b>Version 4.0.1</b><br>
     Originally created: <b>June 09, 2022</b><br>
-    Last edited: <b>April 12, 2024</b><br><br>
+    Last edited: <b>May 06, 2024</b><br><br>
 </div>
 
 <hr />
@@ -96,20 +96,34 @@
 <h1>Tools Menu</h1>
 <h2>Audio Settings</h2>
 <p>The Audio Settings window allows you to select an audio device and assign speakers for playback. </p>
-<p><b>Device Selection.</b> The Audio Settings window displays available audio devices in a table (see lower part of image below). Simply click to choose the desired device. Your selection will be highlighted in blue. </p>
+<p><b>Device Selection.</b> The Audio Settings window displays available audio devices in a table (see lower part of image below). Simply click to choose the desired device. Your selection will be highlighted in blue.<br> 
+<strong>Important:</strong> DO NOT SELECT ANY DEVICE WITH "ASIO" IN THE NAME. SELECT "Analog (1-8)" WITH 8 OUTPUT CHANNELS. If there are multiple Analog (1-8) options, you will have to guess and check by selecting one, then trying the Tools&gt;Test Offsets function. </p>
 <p><b>Speaker Assignment.</b> To assign a speaker for playback, enter the speaker/channel number in the entry box (see upper part of image below). Note that you must provide a speaker for each channel in the audio file. For example, if your stimulus has eight channels, you must provide a list of eight speakers. Separate numbers with spaces when providing a list of speakers. For example: <code>1 2 3 4 5 6 7 8</code>.</p>
-<p><img src="audio_settings.png" alt="Audio Settings Window" width="500"/></p>
-<h2>Calibration</h2>
-<p>The Calibration window provides a simple way to calibrate your stimuli using a sound level meter (SLM). </p>
-<p><b>Calibration Stimulus.</b> You can choose to use the built-in white noise, or provide a custom file for the calibration signal (top group in image below).</p>
-<p><b>Playback Controls.</b> Use the "Level (dB)" entry box to adjust the playback level in dB FS (middle group in image below). The "Play" and "Stop" buttons allow you to start and stop the audio playback.</p>
-<p><b>Measured Level.</b> Use a SLM to measure the level of the calibration signal and enter the SLM reading into the "SLM Reading (dB)" entry box (bottom group in image below). Click submit, and the application will calculate an offset so that you can specify presentation levels in dB (whichever type of dB you set the SLM to when measuring). Note that the "Submit" button is disabled until you click the "Play" button.</p>
-<p><img src="calibration.png" alt="Calibration Window" width="400"/>
+<p><img src="audio_settings.png" alt="Audio Settings Window" width="500"/>
 <br>
 <br></p>
 <hr />
+<h1>How to Balance Speakers</h1>
+<p>The instructions below guide you through the process of using the app to balance the speakers in a given lab. Instructions reference the different color rectangles imposed on the image below.</p>
+<p><img src="totalmix2.png" alt="TotalMix image" width="500"/></p>
+<ol>
+<li>Open TotalMix (see image above)</li>
+<li>Click the Snapshot labeled "Default" (green rectangle)</li>
+<li>Click the Layout Preset labeled "Default" (green rectangle)</li>
+<li>Ensure channels are mapped 1-to-1 (click each channel along the bottom row [Hardware Outputs; blue rectangle], and verify that the corresponding channel along the top row [Software Playback; red rectangle] has the level slider in the 0 position)</li>
+<li>Ensure all the yellow values at the bottom of the sliders along the top row [yellow rectangle] are set to 0</li>
+<li>Create a new Snapshot and Layout Preset name based on the study (green rectangle)</li>
+<li>Create a new Snapshot and Layout Preset from the defaults by clicking the "Store" button (the saved profiles will flash), then click on the new profile (flashing will cease)</li>
+<li>Use the Speaker Balancer as described above</li>
+<li>Calculated offsets will appear in the "Offsets" group at the far righthand side of the Speaker Balancer screen</li>
+<li>Use the offset values from the app to update the yellow values under the sliders of the top row of channels (yellow rectangle)</li>
+<li>Navigate to Tools&gt;Test Offsets to automatically step through each speaker, checking that the sound level meter reads a constant value (within a few tenths of a dB) for all speakers
+<br>
+<br></li>
+</ol>
+<hr />
 <h1>Compiling from Source</h1>
-<p><code>pyinstaller --noconfirm --onefile --windowed --icon "C:/Users/MooTra/Code/Python/tmpy/tmgui/shared_assets/images/logo_icons/logo_full.ico" --add-data "C:/Users/MooTra/Code/Python/tmpy/tmgui;tmgui/" --add-data "C:/Users/MooTra/Code/Python/tmpy/tmdsp;tmdsp/" --paths "C:/Users/MooTra/Code/Python/tmpy/tmdsp" --paths "C:/Users/MooTra/Code/Python/tmpy/tmgui" --hidden-import "pandas" --add-data "C:/Users/MooTra/Code/Python/speaker_balancer/app_assets;app_assets/" --hidden-import "sounddevice" --hidden-import "soundfile" --hidden-import "msoffcrypto"  "C:/Users/MooTra/Code/Python/speaker_balancer/controller.py"</code>
+<p><code>pyinstaller --noconfirm --onefile --windowed --icon "C:/Users/MooTra/Code/Python/tmpy/tkgui/shared_assets/images/logo_icons/logo_full.ico" --add-data "C:/Users/MooTra/Code/Python/speaker_balancer/app_assets;app_assets/" --add-data "C:/Users/MooTra/Code/Python/tmpy;tmpy/" --paths "C:/Users/MooTra/Code/Python/tmpy" --hidden-import "numpy" --hidden-import "pandas" --hidden-import "sounddevice" --hidden-import "soundfile" --hidden-import "msoffcrypto" --hidden-import "idlelib"  "C:/Users/MooTra/Code/Python/speaker_balancer/controller.py"</code>
 <br>
 <br></p>
 <hr />

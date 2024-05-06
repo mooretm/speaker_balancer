@@ -3,17 +3,14 @@
 ###########
 # Imports #
 ###########
-# Testing
+# Standard library
 import pytest
-
-# System
 import sys
 
 # Custom
 sys.path.append("..")
-from models.speakermodel import Speaker
-from models.speakermodel import SpeakerWrangler
-
+from models.speakerwrangler import Speaker
+from models.speakerwrangler import SpeakerWrangler
 
 ############
 # Fixtures #
@@ -39,7 +36,6 @@ def wrangler3_full(wrangler3):
     wrangler3.calc_offset(channel=1, slm_level=75)
     wrangler3.calc_offset(channel=2, slm_level=68)
     return wrangler3
-
 
 ##############
 # Unit Tests #

@@ -1,19 +1,35 @@
-""" Main menu class. """
+""" Main menu class for Speaker Balancer. 
+
+    Written by: Travis M. Moore
+    Last edited: May 02, 2024
+"""
 
 ###########
 # Imports #
 ###########
-# GUI
+# Standard library
+import logging
+import os
+import sys
 import tkinter as tk
 from tkinter import messagebox
 
 # Custom
-from tmgui.shared_assets import images
+try:
+    sys.path.append(os.environ['TMPY'])
+except KeyError:
+    sys.path.append('C:\\Users\\MooTra\\Code\\Python')
+from tmpy.tkgui.shared_assets import images
 
+###########
+# Logging #
+###########
+# Create new logger
+logger = logging.getLogger(__name__)
 
-#########
-# Begin #
-#########
+############
+# MainMenu #
+############
 class MainMenu(tk.Menu):
     """ Main Menu. """
     # Find parent window and tell it to 
@@ -27,6 +43,7 @@ class MainMenu(tk.Menu):
 
     def _bind_accelerators(self):
         """ Bind shortcut keys to event triggers. """
+        logger.debug("Binding menu accelerators")
         self.bind_all('<Control-q>', self._event('<<FileQuit>>'))
 
 
@@ -35,6 +52,7 @@ class MainMenu(tk.Menu):
             PhotoImage objects cannot be created until an 
             instance of Tk has been created.
         """
+        logger.debug("Importing icons")
         self.icons = {
             # File menu
             'file_settings': tk.PhotoImage(file=images.SETTINGS_ICON),
@@ -53,6 +71,7 @@ class MainMenu(tk.Menu):
 
     def __init__(self, parent, _app_info, **kwargs):
         super().__init__(parent, **kwargs)
+        logger.debug("Initializing MainMenu")
 
         # Assign variables
         self._app_info = _app_info
@@ -63,6 +82,7 @@ class MainMenu(tk.Menu):
         #############
         # File Menu #
         #############
+        logger.debug("Creating 'File' menu")
         self.file_menu = tk.Menu(self, tearoff=False)
         self.file_menu.add_command(
             label="Settings...",
@@ -78,10 +98,10 @@ class MainMenu(tk.Menu):
         )
         self.add_cascade(label='File', menu=self.file_menu)
 
-
         ############## 
         # Tools menu #
         ##############
+        logger.debug("Creating 'Tools' menu")
         tools_menu = tk.Menu(self, tearoff=False)
         tools_menu.add_command(
             label='Audio Settings...',
@@ -89,13 +109,12 @@ class MainMenu(tk.Menu):
             image=self.icons['tools_audio'],
             compound=tk.LEFT,
         )
-        #tools_menu.add_separator()
-        tools_menu.add_command(
-            label='Calibration...',
-            command=self._event('<<ToolsCalibration>>'),
-            image=self.icons['tools_calibration'],
-            compound=tk.LEFT,
-        )
+        # tools_menu.add_command(
+        #     label='Calibration...',
+        #     command=self._event('<<ToolsCalibration>>'),
+        #     image=self.icons['tools_calibration'],
+        #     compound=tk.LEFT,
+        # )
         tools_menu.add_separator()
         tools_menu.add_command(
             label="Test Offsets",
@@ -106,10 +125,10 @@ class MainMenu(tk.Menu):
         # Add Tools menu to the menubar
         self.add_cascade(label="Tools", menu=tools_menu)
 
-
         #############
         # Help Menu #
         #############
+        logger.debug("Creating 'Help' menu")
         help_menu = tk.Menu(self, tearoff=False)
         help_menu.add_command(
             label='About...',
@@ -132,23 +151,22 @@ class MainMenu(tk.Menu):
         # Add help menu to the menubar
         self.add_cascade(label="Help", menu=help_menu)
 
-
         #####################
         # Bind accelerators #
         #####################
         self._bind_accelerators()
-
 
     ##################
     # Menu Functions #
     ##################
     # HELP menu
     def show_about(self):
-        """ Show the about dialog. """
+        """ Show the 'About' dialog. """
+        logger.debug("Loading 'About' window")
         about_message = self._app_info['name']
         about_detail = (
             'Written by: Travis M. Moore\n' +
-            'Version {}\n'.format(self._app_info['version']) +
+            'Version: {}\n'.format(self._app_info['version']) +
             'Created: June 9, 2022\n'
             'Last edited: {}'.format(self._app_info['last_edited'])
         )

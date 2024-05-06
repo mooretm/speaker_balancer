@@ -1,31 +1,49 @@
-""" Settings view. """
+""" Settings view for Speaker Balancer. 
+
+    Written by: Travis M. Moore
+    Last edited: May 02, 2024
+"""
 
 ###########
 # Imports #
 ###########
-# Import GUI packages
+# Standard library
+import logging
 import tkinter as tk
 from tkinter import ttk
 
+###########
+# Logging #
+###########
+# Create new logger
+logger = logging.getLogger(__name__)
 
-#########
-# BEGIN #
-#########
+################
+# SettingsView #
+################
 class SettingsView(tk.Toplevel):
     """ View for setting session parameters. """
     def __init__(self, parent, settings, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
-        # Assign variables
+        logger.debug("Initializing SettingsView")
+
+        # Assign attributes
         self.parent = parent
         self.settings = settings
 
-        # Set up root window
+        # Window setup
         self.withdraw()
         self.resizable(False, False)
         self.title("Settings")
         self.grab_set()
 
+        # Populate view with widgets
+        self._draw_widgets()
 
+
+    def _draw_widgets(self):
+        """ Populate the MainView with widgets. """
+        logger.debug("Drawing MainView widgets")
         #################
         # Create Frames #
         #################
@@ -102,6 +120,7 @@ class SettingsView(tk.Toplevel):
     #############
     def center_window(self):
         """ Center the TopLevel window over the root window. """
+        logger.debug("Centering window over parent")
         # Get updated window size (after drawing widgets)
         self.update_idletasks()
 
@@ -120,8 +139,9 @@ class SettingsView(tk.Toplevel):
 
     def _on_submit(self):
         """ Send submit event to controller and close window. """
-        print("\nsettingsview: Sending save event...")
+        logger.debug("Sending 'SUBMIT' event to controller")
         self.parent.event_generate('<<SettingsSubmit>>')
+        logger.debug("Destroying SettingsView instance")
         self.destroy()
 
 

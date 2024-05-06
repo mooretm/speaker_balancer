@@ -1,6 +1,31 @@
 <h1 style="text-align: center;">Change Log: Speaker Balancer</h1>
 ---
 
+## Version 4.0.1
+
+Date May 06, 2024
+
+## Patches
+1. Removed calibration menu option
+2. Added tool tips
+3. Updated documentation
+<br>
+<br>
+
+---
+
+## Version 4.0.0
+
+Date: May 02, 2024
+
+## Major Features
+1. Refactored to consume the latest centralized library.
+2. Added logging.
+<br>
+<br>
+
+---
+
 ## Version 3.0.1
 
 Date: April 12, 2024

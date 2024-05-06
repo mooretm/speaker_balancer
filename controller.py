@@ -10,53 +10,76 @@
 ###########
 # Imports #
 ###########
-# GUI
+# Standard library
+import datetime
+import json
+import logging.config
+import logging.handlers
+import os
+import sys
+import time
 import tkinter as tk
+import webbrowser
+from pathlib import Path
+from threading import Thread
 from tkinter import messagebox
 
-# System
-import datetime
-import os
-from pathlib import Path
-import sys
-from threading import Thread
-import time
-
-# Web
-import webbrowser, markdown
+# Third party
+import markdown
 
 # Custom
-sys.path.append(os.environ['TMPY'])
-# Settings
-from setup import settings_vars
-# Menus
-from menus import mainmenu
-# Exceptions
-from tmgui.shared_exceptions import audio_exceptions
-# Models
-from tmgui.shared_models import versionchecker
-from tmgui.shared_models import audiomodel
-from tmgui.shared_models import filehandler
-from tmgui.shared_models import calmodel
-from tmgui.shared_models import settingsmodel
-from models import speakermodel
-# Views
-from views import mainview
-from views import settingsview
-from tmgui.shared_views import audioview
-from tmgui.shared_views import calibrationview
-# Images
-from tmgui.shared_assets import images
-# Help
-from app_assets import README
-from app_assets import CHANGELOG
-# Functions
-from tmdsp import tmsignals
+try:
+    sys.path.append(os.environ['TMPY'])
+except KeyError:
+    sys.path.append('C:\\Users\\MooTra\\Code\\Python')
+import app_assets
+import menus
+import models
+import setup
+import tmpy
+import views
+from tmpy import tkgui
 
+##########
+# Logger #
+##########
+logger = logging.getLogger(__name__)
 
-#########
-# BEGIN #
-#########
+def setup_logging(NAME):
+    """ Create output log file path. 
+        Import and update logging config JSON file.
+        Apply config to logger.
+    """
+    # Create logging output file path based on app name
+    flat_name = tmpy.functions.helper_funcs.flatten_text(NAME)
+    _app_with_ext = flat_name + '.log.jsonl'
+    filename = os.path.join(Path.home(), flat_name, _app_with_ext)
+
+    # Specify logging config file path
+    try:
+        config_file = os.path.join(
+            os.environ['TMPY'],
+            'tmpy',
+            'logger',
+            'logger_config.json'
+        )
+    except KeyError:
+        config_file = tmpy.logger.LOGGER_CONFIG_JSON
+
+    # Import and update logging config file
+    with open(config_file) as f_in:
+        config = json.load(f_in)
+        # Update output file location based on app name
+        config['handlers']['file']['filename'] = filename
+        # Pass in custom JSONFormatter
+        config['formatters']['json']['()'] = tmpy.logger.JSONFormatter
+
+    # Apply logging config
+    logging.config.dictConfig(config)
+
+###############
+# Application #
+###############
 class Application(tk.Tk):
     """ Application root window. """
     def __init__(self, *args, **kwargs):
@@ -66,27 +89,35 @@ class Application(tk.Tk):
         # Constants #
         #############
         self.NAME = 'Speaker Balancer'
-        self.VERSION = '3.0.1'
-        self.EDITED = 'April 12, 2024'
+        self.VERSION = '4.0.1'
+        self.EDITED = 'May 06, 2024'
 
-        # Create menu settings dictionary
-        self._app_info = {
-            'name': self.NAME,
-            'version': self.VERSION,
-            'last_edited': self.EDITED
-        }
-
-        ######################################
-        # Initialize Models, Menus and Views #
-        ######################################
-        # Setup main window
+        # Window setup
         self.withdraw() # Hide window during setup
         self.resizable(False, False)
         self.title(self.NAME)
         self.taskbar_icon = tk.PhotoImage(
-            file=images.LOGO_FULL_PNG
+            file=tkgui.shared_assets.images.LOGO_FULL_PNG
             )
         self.iconphoto(True, self.taskbar_icon)
+
+        ######################################
+        # Initialize Models, Menus and Views #
+        ######################################
+        # Load current settings from file
+        # or load defaults if file does not exist yet
+        self.settings_model = tkgui.models.SettingsModel(
+            parent=self,
+            settings_vars=setup.settings_vars.fields,
+            app_name=self.NAME
+            )
+        self._load_settings()
+
+        # Set up custom logger as soon as config dir is created
+        # (i.e., after settings model has been initialized)
+        setup_logging(self.NAME)
+        logger.debug("Started custom logger")
+        logger.debug("Initializing application")
 
         # Assign special quit function on window close
         self.protocol('WM_DELETE_WINDOW', self._quit)
@@ -97,28 +128,24 @@ class Application(tk.Tk):
             'slm_reading': tk.DoubleVar(value=None),
         }
 
-        # Load current settings from file
-        # or load defaults if file does not exist yet
-        # Check for version updates and destroy if mandatory
-        self.settings_model = settingsmodel.SettingsModel(
-            parent=self,
-            settings_vars=settings_vars.fields,
-            app_info=self._app_info
-            )
-        self._load_settings()
-
         # Create SpeakerWrangler object
         self.speakers = self._create_speakerwrangler()
 
         # Load calibration model
-        self.calmodel = calmodel.CalModel(self.settings)
+        self.calibration_model = tkgui.models.CalibrationModel(self.settings)
 
         # Load main view
-        self.main_frame = mainview.MainFrame(self, self.settings, self._vars)
-        self.main_frame.grid(row=5, column=5)
+        self.main_view = views.MainView(self, self.settings, self._vars)
+        self.main_view.grid(row=5, column=5)
 
         # Load menus
-        self.menu = mainmenu.MainMenu(self, self._app_info)
+        # Create menu settings dictionary
+        self._app_info = {
+            'name': self.NAME,
+            'version': self.VERSION,
+            'last_edited': self.EDITED
+        }
+        self.menu = menus.MainMenu(self, self._app_info)
         self.config(menu=self.menu)
 
         # Create callback dictionary
@@ -155,17 +182,20 @@ class Application(tk.Tk):
         }
 
         # Bind callbacks to sequences
+        logger.debug("Binding callbacks to controller")
         for sequence, callback in event_callbacks.items():
             self.bind(sequence, callback)
 
-        # Center main window
-        self.center_window()
-
+        ###################
+        # Version Control #
+        ###################
         # Check for updates
         if self.settings['check_for_updates'].get() == 'yes':
             _filepath = self.settings['version_lib_path'].get()
-            u = versionchecker.VersionChecker(_filepath, self.NAME, self.VERSION)
+            u = tkgui.models.VersionModel(_filepath, self.NAME, self.VERSION)
             if u.status == 'mandatory':
+                logger.critical("This version: %s", self.VERSION)
+                logger.critical("Mandatory update version: %s", u.new_version)
                 messagebox.showerror(
                     title="New Version Available",
                     message="A mandatory update is available. Please install " +
@@ -173,7 +203,9 @@ class Application(tk.Tk):
                     detail=f"You are using version {u.app_version}, but " +
                         f"version {u.new_version} is available."
                 )
+                logger.critical("Application failed to initialize")
                 self.destroy()
+                return
             elif u.status == 'optional':
                 messagebox.showwarning(
                     title="New Version Available",
@@ -196,12 +228,18 @@ class Application(tk.Tk):
                     detail="Please check that you have access to Starfile."
                 )
 
+        # Center main window
+        self.center_window()
+
+        # Initialization successful
+        logger.info('Application initialized successfully')
 
     #####################
     # General Functions #
     #####################
     def center_window(self):
         """ Center the root window. """
+        logger.debug("Centering root window after drawing widgets")
         self.update_idletasks()
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
@@ -214,6 +252,7 @@ class Application(tk.Tk):
 
     def _create_filename(self):
         """ Create file name and path. """
+        logger.debug("Creating file name with date stamp")
         datestamp = datetime.datetime.now().strftime("%Y_%b_%d_%H%M")
         self.filename = "speaker_offsets_" + datestamp + ".csv"
 
@@ -226,7 +265,7 @@ class Application(tk.Tk):
         num_speakers = self.settings['num_speakers'].get()
 
         # Instantiate and populate SpeakerWrangler
-        sw = speakermodel.SpeakerWrangler()
+        sw = models.SpeakerWrangler()
         for ii in range(0, num_speakers):
             sw.add_speaker(ii)
         return sw
@@ -234,6 +273,7 @@ class Application(tk.Tk):
 
     def _quit(self):
         """ Exit the application. """
+        logger.info("User ended the session")
         self.destroy()
 
 
@@ -242,8 +282,8 @@ class Application(tk.Tk):
     ###################
     def _show_settings_view(self):
         """ Show session parameter dialog. """
-        print("\ncontroller: Calling session dialog...")
-        settingsview.SettingsView(self, self.settings)
+        logger.debug("Calling settings view")
+        views.SettingsView(self, self.settings)
 
 
     ########################
@@ -251,12 +291,15 @@ class Application(tk.Tk):
     ########################
     def _on_play(self):
         """ Generate and present WGN. """
+        logger.debug("Play button pressed")
         # Save latest duration and level values
+        logger.debug("Saving provided level and duration values")
         self._save_settings()
 
         # Generate WGN
+        logger.debug("Generating white Gaussian noise")
         FS = 48000
-        _wgn = tmsignals.wgn(dur=self.settings['duration'].get(), fs=FS)
+        _wgn = tmpy.tmsignals.wgn(dur=self.settings['duration'].get(), fs=FS)
 
         # Present WGN
         self.present_audio(
@@ -268,6 +311,7 @@ class Application(tk.Tk):
 
     def _on_submit(self):
         """ Save SLM Reading value and update Speaker object. """
+        logger.debug("Submit button pressed")
         # Get current values
         current_speaker = self._vars['selected_speaker'].get()
         slm_level = self._vars['slm_reading'].get()
@@ -278,28 +322,30 @@ class Application(tk.Tk):
                 channel=current_speaker, 
                 slm_level=slm_level
             )
-            self.main_frame.update_offset_labels(
+            self.main_view.update_offset_labels(
                 channel=current_speaker,
                 offset=self.speakers.speaker_list[current_speaker].offset
             )
         except TypeError as e:
             msg = "Please start with channel 1 to create a reference level!"
-            print("\ncontroller: " + msg)
+            logger.exception(msg)
             messagebox.showwarning(
                 title="Invalid Reference Level",
                 message=msg,
                 detail=e
             )
         
-        # Print feedback to console
-        print(f"controller:"\
-              f"{self.speakers.speaker_list[current_speaker].__dict__}")
+        # Show feedback
+        logger.info("%s", 
+                    self.speakers.speaker_list[current_speaker].__dict__
+                    )
 
 
     def _on_save(self):
         """ Create dictionary with channels and offsets.
             Save dictionary to CSV. 
         """
+        logger.debug("Attempting to create offset file")
         # Check for missing offsets (i.e., speakers that weren't balanced)
         missing_offsets = self.speakers.check_for_missing_offsets()
         if missing_offsets:
@@ -320,14 +366,15 @@ class Application(tk.Tk):
         self._create_filename()
 
         # Call filehandler save function
+        logger.debug("Attempting to save file")
         try:
-            self.mycsv = filehandler.CSVFile(
+            self.mycsv = tmpy.readwrite.CSVFile(
                 filepath=self.filename, 
                 data=offset_dict, 
                 file_browser=True
             )
         except PermissionError as e:
-            print(e)
+            logger.exception(e)
             messagebox.showerror(
                 title="Access Denied",
                 message="Data not saved! Cannot write to file!",
@@ -335,7 +382,7 @@ class Application(tk.Tk):
             )
             return
         except OSError as e:
-            print(e)
+            logger.exception(e)
             messagebox.showerror(
                 title="File Not Found",
                 message="Cannot find file or directory!",
@@ -362,13 +409,13 @@ class Application(tk.Tk):
         for key, data in self.settings_model.fields.items():
             vartype = vartypes.get(data['type'], tk.StringVar)
             self.settings[key] = vartype(value=data['value'])
-        print("\ncontroller: Loaded sessionpars model fields into " +
-            "running sessionpars dict")
+        logger.debug("Loaded settings model fields into " +
+            "running settings dict")
 
 
     def _save_settings(self, *_):
         """ Save current runtime parameters to file. """
-        print("\ncontroller: Calling sessionpars model set and save funcs")
+        logger.debug("Calling settings model set and save funcs")
         for key, variable in self.settings.items():
             self.settings_model.set(key, variable.get())
             self.settings_model.save()
@@ -379,36 +426,41 @@ class Application(tk.Tk):
     ########################
     def _on_test_offsets(self):
         """ Start automated offset test thread. """
+        logger.debug("Beginning automated offset test")
         # Delete existig instances of thread object
         try:
             del self.t
+            logger.debug("Deleted thread instance")
         except AttributeError:
             pass
 
         # Create and call Thread instance
         try:
+            logger.debug("Creating and calling new thread")
             self.t = Thread(target=self._on_test_offsets_thread)
             self.t.start()
         except:
-            print("\ncontroller: Failed to start audio thread.")
+            logger.critical("Failed to start audio thread!")
             return
 
 
     def _on_test_offsets_thread(self):
         """ Automatically step through all speakers. """
+        logger.debug("New thread for looping through speakers")
         # Get number of speakers/channels
         num_speakers = self.settings['num_speakers'].get()
 
         # Update mainview: START TEST
-        self.main_frame.start_auto_test()
+        self.main_view.start_auto_test()
 
         # Present WGN to each speaker for the specified duration
         for ii in range(0, num_speakers):
+            logger.debug("Testing speaker %d", ii)
             # Select speaker number
             self._vars['selected_speaker'].set(ii)
 
             # Enable current speaker button on mainframe
-            self.main_frame._update_single_speaker_button_state(ii, 'enabled')
+            self.main_view._update_single_speaker_button_state(ii, 'enabled')
 
             # Routing from the audioview is saved as a string
             chan=str(ii+1)
@@ -421,22 +473,22 @@ class Application(tk.Tk):
             time.sleep(self.settings['duration'].get())
 
             # Disable current speaker button
-            self.main_frame._update_single_speaker_button_state(ii, 'disabled')
+            self.main_view._update_single_speaker_button_state(ii, 'disabled')
 
         # Update mainview: END TEST
-        self.main_frame.end_auto_test()
+        self.main_view.end_auto_test()
 
 
     def _show_audio_dialog(self):
         """ Show audio settings dialog. """
-        print("\ncontroller: Calling audio dialog...")
-        audioview.AudioView(self, self.settings)
+        logger.debug("Calling audio device window")
+        tkgui.views.AudioView(self, self.settings)
 
 
     def _show_calibration_dialog(self):
         """ Display the calibration dialog window. """
-        print("\ncontroller: Calling calibration dialog...")
-        calibrationview.CalibrationView(self, self.settings)
+        logger.debug("Calling calibration window")
+        tkgui.views.CalibrationView(self, self.settings)
 
 
     ################################
@@ -444,10 +496,12 @@ class Application(tk.Tk):
     ################################
     def play_calibration_file(self):
         """ Load calibration file and present. """
+        logger.debug("Play calibration file called")
         # Get calibration file
         try:
-            self.calmodel.get_cal_file()
+            self.calibration_model.get_cal_file()
         except AttributeError:
+            logger.exception("Cannot find internal calibration file!")
             messagebox.showerror(
                 title="File Not Found",
                 message="Cannot find internal calibration file!",
@@ -455,7 +509,7 @@ class Application(tk.Tk):
             )
         # Present calibration signal
         self.present_audio(
-            audio=Path(self.calmodel.cal_file), 
+            audio=Path(self.calibration_model.cal_file), 
             pres_level=self.settings['cal_level_dB'].get()
         )
 
@@ -463,7 +517,7 @@ class Application(tk.Tk):
     def _calc_offset(self):
         """ Calculate offset based on SLM reading. """
         # Calculate new presentation level
-        self.calmodel.calc_offset()
+        self.calibration_model.calc_offset()
         # Save level - this must be called here!
         self._save_settings()
 
@@ -471,44 +525,43 @@ class Application(tk.Tk):
     def _calc_level(self, desired_spl):
         """ Calculate new dB FS level using slm_offset. """
         # Calculate new presentation level
-        self.calmodel.calc_level(desired_spl)
+        self.calibration_model.calc_level(desired_spl)
         # Save level - this must be called here!
         self._save_settings()
-
 
     #######################
     # Help Menu Functions #
     #######################
     def _show_help(self):
         """ Create html help file and display in default browser. """
-        print(f"\ncontroller: Calling README file (will open in browser)")
+        logger.debug("Calling README file (will open in browser)")
         # Read markdown file and convert to html
-        with open(README.README_MD, 'r') as f:
+        with open(app_assets.README.README_MD, 'r') as f:
             text = f.read()
             html = markdown.markdown(text)
 
         # Create html file for display
-        with open(README.README_HTML, 'w') as f:
+        with open(app_assets.README.README_HTML, 'w') as f:
             f.write(html)
 
         # Open README in default web browser
-        webbrowser.open(README.README_HTML)
+        webbrowser.open(app_assets.README.README_HTML)
 
 
     def _show_changelog(self):
         """ Create html CHANGELOG file and display in default browser. """
-        print(f"\ncontroller: Calling CHANGELOG file (will open in browser)")
+        logger.debug("Calling CHANGELOG file (will open in browser)")
         # Read markdown file and convert to html
-        with open(CHANGELOG.CHANGELOG_MD, 'r') as f:
+        with open(app_assets.CHANGELOG.CHANGELOG_MD, 'r') as f:
             text = f.read()
             html = markdown.markdown(text)
 
         # Create html file for display
-        with open(CHANGELOG.CHANGELOG_HTML, 'w') as f:
+        with open(app_assets.CHANGELOG.CHANGELOG_HTML, 'w') as f:
             f.write(html)
 
         # Open CHANGELOG in default web browser
-        webbrowser.open(CHANGELOG.CHANGELOG_HTML)
+        webbrowser.open(app_assets.CHANGELOG.CHANGELOG_HTML)
 
 
     ###################
@@ -517,11 +570,12 @@ class Application(tk.Tk):
     def _create_audio_object(self, audio, **kwargs):
         # Create audio object
         try:
-            self.a = audiomodel.Audio(
+            self.a = tmpy.audio_handlers.AudioPlayer(
                 audio=audio,
                 **kwargs
             )
         except FileNotFoundError:
+            logger.exception("Cannot find audio file!")
             messagebox.showerror(
                 title="File Not Found",
                 message="Cannot find the audio file!",
@@ -529,24 +583,78 @@ class Application(tk.Tk):
             )
             self._show_settings_view()
             return
-        except audio_exceptions.InvalidAudioType:
+        except tmpy.audio_handlers.audio_exceptions.InvalidAudioType:
             raise
-        except audio_exceptions.MissingSamplingRate:
+        except tmpy.audio_handlers.audio_exceptions.MissingSamplingRate:
             raise
+
+
+    def _format_routing(self, routing):
+        """ Convert space-separated string to list of ints
+            for speaker routing.
+        """
+        logger.debug("Formatting channel routing string as list")
+        routing = routing.split()
+        routing = [int(x) for x in routing]
+        return routing
+    
+
+    def _play(self, pres_level):
+        """ Format channel routing, present audio and catch exceptions. """
+        # Attempt to present audio
+        try:
+            self.a.play(
+                level=pres_level,
+                device_id=self.settings['audio_device'].get(),
+                routing=self._format_routing(
+                    self.settings['channel_routing'].get())
+            )
+        except tmpy.audio_handlers.InvalidAudioDevice as e:
+            logger.exception("Invalid audio device: %s", e)
+            messagebox.showerror(
+                title="Invalid Device",
+                message="Invalid audio device! Go to Tools>Audio Settings " +
+                    "to select a valid audio device.",
+                detail = e
+            )
+            # Open Audio Settings window
+            self._show_audio_dialog()
+        except tmpy.audio_handlers.InvalidRouting as e:
+            logger.exception("Invalid routing: %s", e)
+            messagebox.showerror(
+                title="Invalid Routing",
+                message="Speaker routing must correspond with the " +
+                    "number of channels in the audio file! Go to " +
+                    "Tools>Audio Settings to update the routing.",
+                detail=e
+            )
+            # Open Audio Settings window
+            self._show_audio_dialog()
+        except tmpy.audio_handlers.Clipping:
+            logger.exception("Clipping has occurred - aborting!")
+            messagebox.showerror(
+                title="Clipping",
+                message="The level is too high and caused clipping.",
+                detail="The waveform will be plotted when this message is " +
+                    "closed for visual inspection."
+            )
+            self.a.plot_waveform("Clipped Waveform")
 
 
     def present_audio(self, audio, pres_level, **kwargs):
         # Load audio
         try:
             self._create_audio_object(audio, **kwargs)
-        except audio_exceptions.InvalidAudioType as e:
+        except tmpy.audio_handlers.InvalidAudioType as e:
+            logger.exception("Invalid audio format: %s", e)
             messagebox.showerror(
                 title="Invalid Audio Type",
                 message="The audio type is invalid!",
                 detail=f"{e} Please provide a Path or ndarray object."
             )
             return
-        except audio_exceptions.MissingSamplingRate as e:
+        except tmpy.audio_handlers.MissingSamplingRate as e:
+            logger.exception("Missing sampling rate: %s", e)
             messagebox.showerror(
                 title="Missing Sampling Rate",
                 message="No sampling rate was provided!",
@@ -558,65 +666,13 @@ class Application(tk.Tk):
         self._play(pres_level)
 
 
-    def _play(self, pres_level):
-        """ Format channel routing, present audio and catch 
-            exceptions.
-        """
-        # Attempt to present audio
-        try:
-            self.a.play(
-                level=pres_level,
-                device_id=self.settings['audio_device'].get(),
-                routing=self._format_routing(
-                    self.settings['channel_routing'].get())
-            )
-        except audio_exceptions.InvalidAudioDevice as e:
-            print(e)
-            messagebox.showerror(
-                title="Invalid Device",
-                message="Invalid audio device! Go to Tools>Audio Settings " +
-                    "to select a valid audio device.",
-                detail = e
-            )
-            # Open Audio Settings window
-            self._show_audio_dialog()
-        except audio_exceptions.InvalidRouting as e:
-            print(e)
-            messagebox.showerror(
-                title="Invalid Routing",
-                message="Speaker routing must correspond with the " +
-                    "number of channels in the audio file! Go to " +
-                    "Tools>Audio Settings to update the routing.",
-                detail=e
-            )
-            # Open Audio Settings window
-            self._show_audio_dialog()
-        except audio_exceptions.Clipping:
-            print("controller: Clipping has occurred! Aborting!")
-            messagebox.showerror(
-                title="Clipping",
-                message="The level is too high and caused clipping.",
-                detail="The waveform will be plotted when this message is " +
-                    "closed for visual inspection."
-            )
-            self.a.plot_waveform("Clipped Waveform")
-
-
     def stop_audio(self):
+        """ Stop audio playback. """
+        logger.debug("User stopped audio playback")
         try:
             self.a.stop()
         except AttributeError:
-            print("\ncontroller: Stop called, but there is no audio object!")
-
-
-    def _format_routing(self, routing):
-        """ Convert space-separated string to list of ints
-            for speaker routing.
-        """
-        routing = routing.split()
-        routing = [int(x) for x in routing]
-
-        return routing
+            logger.debug("Stop called, but there is no audio object!")
 
 
 if __name__ == "__main__":

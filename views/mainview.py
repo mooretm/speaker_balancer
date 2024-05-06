@@ -1,19 +1,31 @@
-""" Main view for Speaker Balancer. """
+""" Main view for Speaker Balancer. 
+
+    Written by: Travis M. Moore
+    Last edited: May 06, 2024
+"""
 
 ###########
 # Imports #
 ###########
-# Import GUI packages
+# Standard library
+import logging
 import tkinter as tk
+from idlelib.tooltip import Hovertip
 from tkinter import ttk
 
+##########
+# Logger #
+##########
+# Create new logger
+logger = logging.getLogger(__name__)
 
-#########
-# BEGIN #
-#########
-class MainFrame(ttk.Frame):
+############
+# MainView #
+############
+class MainView(ttk.Frame):
     def __init__(self, parent, settings, _vars, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
+        logger.debug("Initializing MainView")
 
         # Assign variables
         self.parent = parent
@@ -27,6 +39,11 @@ class MainFrame(ttk.Frame):
 
     def draw_widgets(self):
         """ Populate the main view with all widgets. """
+        logger.debug("Drawing MainView widgets")
+
+        # Common tooltip delay (ms)
+        tt_delay = 1000
+
         ##########
         # Styles #
         ##########
@@ -41,7 +58,6 @@ class MainFrame(ttk.Frame):
         # Colors
         custom_color = 'DeepSkyBlue' # 'SystemWindow' 'DeepSkyBlue'
 
-
         ##########
         # Header #
         ##########
@@ -54,7 +70,6 @@ class MainFrame(ttk.Frame):
 
         # ttk.Separator(self, orient='horizontal').grid(row=10, column=5, 
         #     columnspan=30, sticky='we')
-
 
         #################
         # Create frames #
@@ -99,20 +114,29 @@ class MainFrame(ttk.Frame):
         lfrm_offsets.grid(column=15, row=5, 
                           **options, sticky='nsew')
 
-
         #########################
         # Presentation Controls #
         #########################
         # Duration
-        ttk.Label(lfrm_playback, text="Duration (s):").grid(
-            column=5, row=5, sticky='e', **options_small)
+        lbl_duration = ttk.Label(lfrm_playback, text="Duration (s):")
+        lbl_duration.grid(column=5, row=5, sticky='e', **options_small)
+        duration_tt = Hovertip(
+            anchor_widget=lbl_duration,
+            text="Playback duration for white noise.",
+            hover_delay=tt_delay
+        )
         ent_dur = ttk.Entry(lfrm_playback, 
             textvariable=self.settings['duration'], width=6)
         ent_dur.grid(column=10, row=5, sticky='w', **options_small)
 
         # Level
-        ttk.Label(lfrm_playback, text="Level (dB):").grid(
-            column=5, row=10, sticky='e', **options_small)
+        lbl_level = ttk.Label(lfrm_playback, text="Level (dB):")
+        lbl_level.grid(column=5, row=10, sticky='e', **options_small)
+        level_tt = Hovertip(
+            anchor_widget=lbl_level,
+            text="Playback level for white noise.",
+            hover_delay=tt_delay
+        )
         ent_slm = ttk.Entry(lfrm_playback, 
             textvariable=self.settings['level'], width=6)
         ent_slm.grid(column=10, row=10, sticky='w', **options_small)
@@ -129,13 +153,17 @@ class MainFrame(ttk.Frame):
         btn_stop.grid(column=5, row=20, columnspan=6, sticky='ew', 
             **options_small)
 
-
         ##########################
         # Measured Level Widgets #
         ##########################
         # SLM reading entry box
-        ttk.Label(lfrm_slm, text="SLM Reading (dB):").grid(
-            column=5, row=15, sticky='e', **options_small)
+        lbl_slm = ttk.Label(lfrm_slm, text="SLM Reading (dB):")
+        lbl_slm.grid(column=5, row=15, sticky='e', **options_small)
+        slm_tt = Hovertip(
+            anchor_widget=lbl_slm,
+            text="Level measured by the sound level meter.",
+            hover_delay=tt_delay
+        )
         self.ent_slm = ttk.Entry(lfrm_slm, 
             textvariable=self._vars['slm_reading'],
             width=6)
@@ -147,7 +175,6 @@ class MainFrame(ttk.Frame):
         self.btn_submit.grid(column=5, columnspan=10, row=20, sticky='nsew', 
             **options_small)
 
-
         #################
         # Offset Button #
         #################
@@ -155,7 +182,6 @@ class MainFrame(ttk.Frame):
             command=self._on_save).grid(row=5, column=5, columnspan=20, 
             padx=5, pady=5, sticky='nswe'
         )
-
 
         #########################
         # Speaker Radio Buttons #
@@ -192,12 +218,12 @@ class MainFrame(ttk.Frame):
         # Select first speaker
         self._vars['selected_speaker'].set(0)
 
-
     #############
     # Functions #
     #############
     def _next_speaker(self):
         """ Calculate next speaker to advance to. """
+        logger.debug("Getting next speaker")
         next_speaker = self._vars['selected_speaker'].get() + 1
         if next_speaker >= self.settings['num_speakers'].get():
             next_speaker = 0
@@ -207,6 +233,7 @@ class MainFrame(ttk.Frame):
 
     def _on_submit(self):
         """ Send submit event to controller. """
+        logger.debug("Sending 'SUBMIT' event to controller")
         self.event_generate('<<MainSubmit>>')
 
         # Select next speaker
@@ -215,6 +242,7 @@ class MainFrame(ttk.Frame):
 
     def update_offset_labels(self, channel, offset):
         """ Display calculated offset in offset label frame. """
+        logger.debug("Updating labels with offset values")
         self.offset_labels[channel].configure(text=f"{channel+1}: {offset}")
 
 
@@ -222,6 +250,7 @@ class MainFrame(ttk.Frame):
         """ Update the LabelFrame text containing the speaker radio 
             buttons. 
         """
+        logger.debug("Updating label frame to show test in progress")
         # Configure LabelFrame text with provided text
         self.lfrm_speakers.configure(text=text)
 
@@ -230,6 +259,7 @@ class MainFrame(ttk.Frame):
         """ Change status of all radio buttons to STATUS
             ('enabled' or 'disabled').
         """
+        logger.debug("Changing all speaker buttons to: %s", state)
         # Update status for each speaker radio button in list
         for btn in self.radio_list:
             btn.configure(state=state)
@@ -241,6 +271,7 @@ class MainFrame(ttk.Frame):
 
     def start_auto_test(self):
         """ Update GUI for automated test protocol. """
+        logger.debug("Starting automated speaker test")
         # Disable all speaker radio buttons
         self._update_all_speaker_buttons_state(state='disabled')
 
@@ -250,6 +281,7 @@ class MainFrame(ttk.Frame):
 
     def end_auto_test(self):
         """ Update GUI for automated test protocol. """
+        logger.debug("Cleaning up after automatic test")
         # Enable all speaker radio buttons
         self._update_all_speaker_buttons_state(state='enabled')
 
@@ -261,6 +293,7 @@ class MainFrame(ttk.Frame):
         """ Change status of the specified radio button
             to STATUS ('enabled' or 'disabled').
         """
+        logger.debug("Updating %d state to: %s", speaker_num, state)
         # Update status for each radio button in list
         self.radio_list[speaker_num].configure(state=state)
         self.label_list[speaker_num].configure(state=state)
@@ -268,11 +301,13 @@ class MainFrame(ttk.Frame):
 
     def _on_save(self):
         """ Send save event to controller. """
+        logger.debug("Sending 'SAVE' event to controller")
         self.event_generate('<<MainSave>>')
 
 
     def _on_play(self):
         """ Send start audio playback event to controller. """
+        logger.debug("Sending 'PLAY' event to controller")
         self.settings['channel_routing'].set(
             self._vars['selected_speaker'].get()+1)
         self.event_generate('<<MainPlay>>')
@@ -280,4 +315,9 @@ class MainFrame(ttk.Frame):
 
     def _on_stop(self):
         """ Send stop audio playback event to controller. """
+        logger.debug("Sending 'STOP' event to controller")
         self.event_generate('<<MainStop>>')
+
+
+if __name__ == "__main__":
+    pass
